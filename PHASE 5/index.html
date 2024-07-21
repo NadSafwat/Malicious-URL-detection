@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Malicious URL Predictor</title>
+    <style>
+      body {
+        font-family: "Times New Roman", Times, serif;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #ffffff;
+      }
+      .container {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 100px;
+        border: 3px solid #ccc;
+        border-radius: 5px;
+        border-color: #b19cd9;
+      }
+      button {
+        background-color: #b19cd9;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        cursor: pointer;
+        border-radius: 10px;
+        margin-right: 10px;
+      }
+      label {
+        font-size: 20px;
+      }
+
+      input[type="text"] {
+        width: 200px;
+        padding: 5px;
+        font-size: 16px;
+      }
+      .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-top: 4px solid #007bff; /* Blue color */
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Malicious URL Predictor</h1>
+      <form id="urlForm">
+        <label for="urlInput">Enter URL:</label>
+        <input type="text" id="urlInput" placeholder="https://example.com" />
+        <button type="button" onclick="predictMalicious()">Predict</button>
+      </form>
+      <div id="loadingSpinner" style="display: none">
+        <div class="spinner"></div>
+      </div>
+      <div id="predictionResult"></div>
+    </div>
+    <script>
+      let url;
+      let pred;
+
+      function predictMalicious() {
+        url = document.getElementById("urlInput").value;
+
+        document.getElementById("loadingSpinner").style.display = "block";
+        // Make an API call to server
+        fetch("http://localhost:5000/predict", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url }), // Send the user input as JSON
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log(url);
+            console.log(data);
+            document.getElementById("loadingSpinner").style.display = "none";
+            // Display the prediction result
+
+            pred = data[0];
+            const resultDiv = document.getElementById("predictionResult");
+            resultDiv.innerHTML = `<div id="predictionResult" style="margin-top: 15px;"> Prediction: The URL is ${
+              pred === 0 ? "malicious" : "safe"
+            }.<br>`;
+
+            resultDiv.innerHTML += `Is this prediction correct? `;
+            resultDiv.innerHTML += `<button onclick="askForFeedback(url, pred, true)">Yes</button>`;
+            resultDiv.innerHTML += `<button onclick="askForFeedback(url, pred, false)">No</button>`;
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+      }
+
+      function askForFeedback(url, prediction, isCorrect) {
+        console.log(url);
+        console.log(prediction);
+        console.log(isCorrect);
+
+        document.getElementById("loadingSpinner").style.display = "block";
+
+        fetch("http://localhost:5000/save_url", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ url, prediction, isCorrect }), // Send the data as JSON
+        })
+          .then((response) => response.json())
+          .then((result) => {
+            document.getElementById("loadingSpinner").style.display = "none";
+            console.log("Server response:", result);
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+
+        const feedbackDiv = document.getElementById("predictionResult");
+        feedbackDiv.innerHTML = `<div id="predictionResult" style="margin-top: 15px; font-size: 16px;"> Feedback received: Prediction is ${
+          isCorrect ? "correct. Saving URL..." : "incorrect. Saving URL..."
+        }`;
+      }
+    </script>
+  </body>
+</html>
